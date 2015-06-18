@@ -1,0 +1,131 @@
+
+#region ================== Copyright (c) 2007 Pascal vd Heiden
+
+/*
+ * Copyright (c) 2007 Pascal vd Heiden, www.codeimp.com
+ * This program is released under GNU General Public License
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ */
+
+#endregion
+
+#region ================== Namespaces
+
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Text;
+using System.Windows.Forms;
+using System.IO;
+using System.Reflection;
+using CodeImp.DoomBuilder.Windows;
+using CodeImp.DoomBuilder.IO;
+using CodeImp.DoomBuilder.Map;
+using CodeImp.DoomBuilder.Rendering;
+using CodeImp.DoomBuilder.Geometry;
+using System.Drawing;
+using CodeImp.DoomBuilder.Editing;
+using CodeImp.DoomBuilder;
+
+#endregion
+
+namespace TriDelta.DrawTextMode
+{
+    public class LineLengthLabel : IDisposable {
+		#region ================== Constants
+
+        private const int TEXT_CAPACITY = 15;
+        private const float TEXT_SCALE = 14f;
+        private const string VALUE_FORMAT = "0";
+
+		#endregion
+
+		#region ================== Variables
+
+        protected TextLabel label;
+        protected Vector2D start;
+        protected Vector2D end;
+        private bool showAngle; //mxd
+
+        #endregion
+
+		#region ================== Properties
+
+		public TextLabel TextLabel { get { return label; } }
+		public Vector2D Start { get { return start; } set { start = value; Update(); } }
+		public Vector2D End { get { return end; } set { end = value; Update(); } }
+
+		#endregion
+
+		#region ================== Constructor / Disposer
+
+        // Constructor
+        public LineLengthLabel(bool showAngle) {
+            this.showAngle = showAngle; //mxd
+            // Initialize
+            Initialize();
+        }
+
+        // Constructor
+        public LineLengthLabel(Vector2D start, Vector2D end) {
+            // Initialize
+            Initialize();
+            Move(start, end);
+        }
+
+        // Initialization
+        protected virtual void Initialize() {
+            label = new TextLabel(TEXT_CAPACITY);
+            label.AlignX = TextAlignmentX.Center;
+            label.AlignY = TextAlignmentY.Middle;
+            label.Color = General.Colors.Highlight;
+            label.Backcolor = General.Colors.Background;
+            label.Scale = TEXT_SCALE;
+            label.TransformCoords = true;
+        }
+
+        // Disposer
+        public void Dispose() {
+            label.Dispose();
+        }
+
+		#endregion
+		
+		#region ================== Methods
+
+        // This updates the text
+        protected virtual void Update() {
+            Vector2D delta = end - start;
+            float length = delta.GetLength();
+
+            //mxd
+            if (showAngle) {
+                float rads = (float)Math.Atan2(-(start.y - end.y), -(start.x - end.x));
+                if (rads < 0)
+                    rads += (float)(Math.PI * 2);
+                int angle = (int)Math.Round(rads * 180 / Math.PI);
+
+                label.Text = "l:" + length.ToString(VALUE_FORMAT) + "; a:" + angle;
+            } else {
+                label.Text = length.ToString(VALUE_FORMAT);
+            }
+
+            label.Rectangle = new RectangleF(start.x + delta.x * 0.5f, start.y + delta.y * 0.5f, 0f, 0f);
+        }
+
+        // This moves the label
+        public void Move(Vector2D start, Vector2D end) {
+            this.start = start;
+            this.end = end;
+            Update();
+        }
+
+        #endregion
+    }
+}
