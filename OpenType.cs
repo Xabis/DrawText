@@ -626,6 +626,10 @@ namespace TriDelta.OpenType {
                char keycode;
                shift2 = 0;
                for (i = 0; i < segCount; i++) {
+                  //Do not capture the table terminator character
+                  if (startCount[i] == 0xFFFF)
+                     break;
+
                   delta = idDelta[i];
                   shift = idRangeOffset[i];
                   if (shift > 0)
