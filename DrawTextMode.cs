@@ -421,8 +421,26 @@ namespace TriDelta.DrawTextMode {
                 General.Map.UndoRedo.CreateUndo("Draw Text");
 
                 // Make the drawing
-                foreach (List<DrawnVertex> shape in shapecache)
+                foreach (List<DrawnVertex> shape in shapecache) {
+                    //if the user holds down ALT while creating, assume they want a "guide" for positioning other map elements. A guide will not split linedefs.
+                    if (!General.Interface.AutoMerge || General.Interface.AltState) {
+                        int j = shape.Count;
+                        DrawnVertex v;
+                        while (j-- > 0) {
+                            v = shape[j];
+                            v.stitchline = false; //don't split any linedefs
+
+                            //don't complete the shape if ALT mode, to prevent sector creation and background fill
+                            if (General.Interface.AltState)
+                                v.stitch = false;
+
+                            shape[j] = v;
+                        }
+                    }
+
+                    // Make the drawing
                     CodeImp.DoomBuilder.Geometry.Tools.DrawLines(shape);
+                }
 
                 // Snap to map format accuracy
                 General.Map.Map.SnapAllToAccuracy();
