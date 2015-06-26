@@ -208,6 +208,8 @@ namespace TriDelta.DrawTextMode {
 
         public void Render() {
             if (renderer.StartOverlay(true)) {
+                float vsize = ((float)renderer.VertexSize + 1.0f) / renderer.Scale;
+
                 //draw a guide circle when drawing circular text
                 if (plug.PlotMode == PlotMode.Circle && handleInner != null && handleOuter != null) {
                     //Calculate the angle and circle starting point
@@ -232,22 +234,27 @@ namespace TriDelta.DrawTextMode {
                         );
 
                         //measure the segment for the total length display
-                        renderer.RenderLine(last, current, LINE_THICKNESS, snapguidetogrid ? pcLineSnap : pcLineFree, true);
+                        renderer.RenderLine(last, current, LINE_THICKNESS, pcLineFree, true);
                         last = current;
                     }
-                    renderer.RenderLine(last, first, LINE_THICKNESS, snapguidetogrid ? pcLineSnap : pcLineFree, true);
+                    renderer.RenderLine(last, first, LINE_THICKNESS, pcLineFree, true);
                 }
 
                 //Render the text glyph outlines
                 if (shapecache.Count > 0) {
                     Vector2D first, last;
                     foreach (List<DrawnVertex> shape in shapecache) {
+                        //draw the preview linedefs
                         first = last = shape[0].pos;
                         for (int i = 1; i < shape.Count; i++) {
-                            renderer.RenderLine(last, shape[i].pos, LINE_THICKNESS, snapguidetogrid ? pcLineSnap : pcLineFree, true);
+                            renderer.RenderLine(last, shape[i].pos, LINE_THICKNESS, pcLineFree, true);
                             last = shape[i].pos;
                         }
-                        renderer.RenderLine(last, first, LINE_THICKNESS, snapguidetogrid ? pcLineSnap : pcLineFree, true);
+                        renderer.RenderLine(last, first, LINE_THICKNESS, pcLineFree, true);
+
+                        //draw the preview vertices
+                        foreach(DrawnVertex p in shape)
+                            RenderPoint(p.pos, vsize, pcLineSnap);
                     }
                 }
 
@@ -275,6 +282,13 @@ namespace TriDelta.DrawTextMode {
                 renderer.Finish();
             }
             renderer.Present();
+        }
+
+        private void RenderPoint(DrawnVertex p, float size, PixelColor color) {
+            RenderPoint(p.pos, size, color);
+        }
+        private void RenderPoint(Vector2D p, float size, PixelColor color) {
+            renderer.RenderRectangleFilled(new RectangleF(p.x - size, p.y - size, size * 2.0f, size * 2.0f), color, true);
         }
 
         private List<List<DrawnVertex>> ConvertPoints(List<PointF[]> shapeList) {
@@ -379,12 +393,19 @@ namespace TriDelta.DrawTextMode {
         public override void OnMouseMove(MouseEventArgs e) {
             base.OnMouseMove(e);
 
+            float gripsize = GRIP_SIZE / renderer.Scale;
             if (handleCurrent != null) {
                 handleCurrent.Position = GetCurrentPosition();
                 Update();
             } else if (isCreating) {
                 handleOuter.Position = GetCurrentPosition();
                 Update();
+            } else if (handleOuter != null && handleOuter.isHovered(MouseMapPos, gripsize)) {
+                General.Interface.SetCursor(Cursors.Hand);
+            } else if (handleInner != null && handleInner.isHovered(MouseMapPos, gripsize)) {
+                General.Interface.SetCursor(Cursors.Hand);
+            } else {
+                General.Interface.SetCursor(Cursors.Default);
             }
         }
 
