@@ -441,6 +441,9 @@ namespace TriDelta.DrawTextMode {
                 // Make undo for the draw
                 General.Map.UndoRedo.CreateUndo("Draw Text");
 
+                // Clear selection
+                General.Map.Map.ClearAllSelected();
+
                 // Make the drawing
                 foreach (List<DrawnVertex> shape in shapecache) {
                     //if the user holds down ALT while creating, assume they want a "guide" for positioning other map elements. A guide will not split linedefs.
@@ -461,13 +464,11 @@ namespace TriDelta.DrawTextMode {
 
                     // Make the drawing
                     CodeImp.DoomBuilder.Geometry.Tools.DrawLines(shape);
+                    General.Map.Map.SelectMarkedLinedefs(true, true);
                 }
 
                 // Snap to map format accuracy
                 General.Map.Map.SnapAllToAccuracy();
-
-                // Clear selection
-                General.Map.Map.ClearAllSelected();
 
                 // Update cached values
                 General.Map.Map.Update();
