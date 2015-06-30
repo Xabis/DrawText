@@ -38,6 +38,7 @@ namespace TriDelta.DrawTextMode {
         BuilderPlug plug;
 
         List<List<DrawnVertex>> shapecache;
+        List<PointF> shapecontrols;
 
         Docker dockerDrawText;
         DrawTextPanel panel;
@@ -68,6 +69,7 @@ namespace TriDelta.DrawTextMode {
             labelGuideLength = new LineLengthLabel(true);
 
             shapecache = new List<List<DrawnVertex>>();
+            shapecontrols = new List<PointF>();
 
             panel = new DrawTextPanel(this);
             dockerDrawText = new Docker("drawtextmode", "Draw Text", panel);
@@ -121,6 +123,17 @@ namespace TriDelta.DrawTextMode {
                 }
             }
         }
+        public float Tolerance {
+            get { return plug.Tolerance; }
+            set {
+                if (value != plug.Tolerance) {
+                    plug.Tolerance = value;
+                    if (plug.Font != null)
+                        plug.Font.Tolerance = value;
+                    Update();
+                }
+            }
+        }
         public PlotMode DrawMode {
             get { return plug.PlotMode; }
             set {
@@ -130,6 +143,16 @@ namespace TriDelta.DrawTextMode {
                 }
             }
         }
+        public bool DebugMode {
+            get { return plug.DebugMode; }
+            set {
+                if (value != plug.DebugMode) {
+                    plug.DebugMode = value;
+                    Update();
+                } 
+            }
+        }
+
         public TextAlignment Alignment {
             get { return plug.TextAlignment; }
             set {
@@ -201,6 +224,7 @@ namespace TriDelta.DrawTextMode {
                 List<PointF[]> lines = plug.Font.PlotString(plug.DisplayText, origin, target, plug.PlotMode, plug.TextAlignment, plug.TextSpacing);
                 if (lines != null)
                     shapecache.AddRange(ConvertPoints(lines));
+                shapecontrols = plug.Font.LastControlList;
             }
 
             Render();
@@ -243,18 +267,46 @@ namespace TriDelta.DrawTextMode {
                 //Render the text glyph outlines
                 if (shapecache.Count > 0) {
                     Vector2D first, last;
-                    foreach (List<DrawnVertex> shape in shapecache) {
-                        //draw the preview linedefs
-                        first = last = shape[0].pos;
-                        for (int i = 1; i < shape.Count; i++) {
-                            renderer.RenderLine(last, shape[i].pos, LINE_THICKNESS, pcLineFree, true);
-                            last = shape[i].pos;
-                        }
-                        renderer.RenderLine(last, first, LINE_THICKNESS, pcLineFree, true);
+                    float heading;
+                    float arrowsize = GRIP_SIZE / renderer.Scale;
+                    bool debugmode = plug.DebugMode;
 
-                        //draw the preview vertices
-                        foreach(DrawnVertex p in shape)
-                            RenderPoint(p.pos, vsize, pcLineSnap);
+                    foreach (List<DrawnVertex> shape in shapecache) {
+                        if (shape.Count > 0) {
+                            //draw the preview linedefs
+                            first = last = shape[0].pos;
+                            for (int i = 1; i < shape.Count - 1; i++) {
+                                renderer.RenderLine(last, shape[i].pos, LINE_THICKNESS, pcLineFree, true);
+
+                                //DEBUG MODE: draw an arrow head to indicate the draw direction
+                                if (debugmode) {
+                                    heading = (float)Math.Atan2(shape[i].pos.y - last.y, shape[i].pos.x - last.x); //calculate the line angle
+                                    RenderArrowHead(shape[i].pos, heading, arrowsize);
+                                }
+
+                                last = shape[i].pos;
+                            }
+                            renderer.RenderLine(last, first, LINE_THICKNESS, pcLineFree, true);
+
+                            //draw the preview vertices
+                            foreach(DrawnVertex p in shape)
+                                RenderPoint(p.pos, vsize, pcLineSnap);
+
+                            //DEBUG MODE: mark the shape start
+                            if (debugmode)
+                                RenderPoint(shape[0].pos, vsize * 1.3f, PixelColor.FromColor(Color.Green));
+                        }
+                    }
+
+                    //DEBUG MODE: draw the bezier curve control handle locations
+                    if (debugmode && shapecontrols.Count > 0) {
+                        float controlsize = GRIP_SIZE / renderer.Scale;
+                        foreach (PointF point in shapecontrols) {
+                            RectangleF rect = new RectangleF(point.X - controlsize * 0.5f, point.Y - controlsize * 0.5f, controlsize, controlsize);
+
+                            renderer.RenderRectangleFilled(rect, General.Colors.Colors[ColorCollection.VERTICES], true);
+                            renderer.RenderRectangle(rect, 2, General.Colors.DarkColors[ColorCollection.VERTICES], true);
+                        }
                     }
                 }
 
@@ -289,6 +341,19 @@ namespace TriDelta.DrawTextMode {
         }
         private void RenderPoint(Vector2D p, float size, PixelColor color) {
             renderer.RenderRectangleFilled(new RectangleF(p.x - size, p.y - size, size * 2.0f, size * 2.0f), color, true);
+        }
+
+        private void RenderArrowHead(Vector2D p, float Heading, float Size) {
+            float x2, y2;
+
+            //draw arrow head
+            y2 = (float)(Math.Sin(Heading + 10f) * Size);
+            x2 = (float)(Math.Cos(Heading + 10f) * Size);
+            renderer.RenderLine(p, new Vector2D(p.x + x2, p.y + y2), LINE_THICKNESS, pcLineFree, true);
+
+            y2 = (float)(Math.Sin(Heading - 10f) * Size);
+            x2 = (float)(Math.Cos(Heading - 10f) * Size);
+            renderer.RenderLine(p, new Vector2D(p.x + x2, p.y + y2), LINE_THICKNESS, pcLineFree, true);
         }
 
         private List<List<DrawnVertex>> ConvertPoints(List<PointF[]> shapeList) {

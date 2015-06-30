@@ -27,6 +27,8 @@ namespace TriDelta.DrawTextMode {
             udTextSize.Value = (decimal)m_mode.Plug.Size;
             udQuality.Value = (decimal)m_mode.Plug.CurveQuality;
             udSpacing.Value = (decimal)m_mode.Plug.TextSpacing;
+            udTolerance.Value = (decimal)m_mode.Plug.Tolerance;
+            chkDebugMode.Checked = m_mode.Plug.DebugMode;
 
             switch (m_mode.Plug.PlotMode) {
                 case PlotMode.Normal:
@@ -96,6 +98,14 @@ namespace TriDelta.DrawTextMode {
         }
         private void cmdCancel_Click(object sender, EventArgs e) {
             m_mode.OnCancel();
+        }
+
+        private void udTolerance_ValueChanged(object sender, EventArgs e) {
+            m_mode.Tolerance = (float)udTolerance.Value;
+        }
+
+        private void chkDebugMode_CheckedChanged(object sender, EventArgs e) {
+            m_mode.DebugMode = chkDebugMode.Checked;
         }
     }
 }
