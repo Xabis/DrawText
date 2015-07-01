@@ -58,6 +58,9 @@ namespace TriDelta.DrawTextMode {
 
         internal event ModeChangedEvent ModeChanged; 
 
+        int HighlightMode = 0;
+        ControlHandle HighlightHandle;
+
         public BuilderPlug Plug {
             get { return plug; }
         }
@@ -312,8 +315,11 @@ namespace TriDelta.DrawTextMode {
 
                 //Render Guide
                 if (handleInner != null) {
+                    PixelColor handlecolor = snapguidetogrid ? pcLineSnap : pcLineFree;
+                    PixelColor highlightcolor = General.Colors.Vertices; //snapguidetogrid ? General.Colors.BrightColors[ColorCollection.HIGHLIGHT] : General.Colors.BrightColors[ColorCollection.SELECTION];
+
                     //guide line
-                    renderer.RenderLine(handleInner.Position, handleOuter.Position, LINE_THICKNESS, snapguidetogrid ? pcLineSnap : pcLineFree, true);
+                    renderer.RenderLine(handleInner.Position, handleOuter.Position, LINE_THICKNESS, handlecolor, true);
                     float gripsize = GRIP_SIZE / renderer.Scale;
 
                     //size text
@@ -324,11 +330,11 @@ namespace TriDelta.DrawTextMode {
                     //control handles
                     RectangleF handleRect = new RectangleF(handleInner.Position.x - gripsize * 0.5f, handleInner.Position.y - gripsize * 0.5f, gripsize, gripsize);
                     renderer.RenderRectangleFilled(handleRect, pcHandleFill, true);
-                    renderer.RenderRectangle(handleRect, 2, snapguidetogrid ? pcLineSnap : pcLineFree, true);
+                    renderer.RenderRectangle(handleRect, 2, HighlightMode == 1 && HighlightHandle == handleInner || handleCurrent == handleInner ? highlightcolor : handlecolor, true);
 
                     handleRect = new RectangleF(handleOuter.Position.x - gripsize * 0.5f, handleOuter.Position.y - gripsize * 0.5f, gripsize, gripsize);
                     renderer.RenderRectangleFilled(handleRect, pcHandleFill, true);
-                    renderer.RenderRectangle(handleRect, 2, snapguidetogrid ? pcLineSnap : pcLineFree, true);
+                    renderer.RenderRectangle(handleRect, 2, HighlightMode == 1 && HighlightHandle == handleOuter || handleCurrent == handleOuter ? highlightcolor : handlecolor, true);
                 }
 
                 renderer.Finish();
@@ -466,11 +472,26 @@ namespace TriDelta.DrawTextMode {
                 handleOuter.Position = GetCurrentPosition();
                 Update();
             } else if (handleOuter != null && handleOuter.isHovered(MouseMapPos, gripsize)) {
-                General.Interface.SetCursor(Cursors.Hand);
+                if (HighlightHandle != handleOuter) {
+                    General.Interface.SetCursor(Cursors.Hand);
+                    HighlightMode = 1;
+                    HighlightHandle = handleOuter;
+                    Render();
+                }
             } else if (handleInner != null && handleInner.isHovered(MouseMapPos, gripsize)) {
-                General.Interface.SetCursor(Cursors.Hand);
+                if (HighlightHandle != handleInner) {
+                    General.Interface.SetCursor(Cursors.Hand);
+                    HighlightMode = 1;
+                    HighlightHandle = handleInner;
+                    Render();
+                }
             } else {
-                General.Interface.SetCursor(Cursors.Default);
+                if (HighlightMode > 0) {
+                    General.Interface.SetCursor(Cursors.Default);
+                    HighlightMode = 0;
+                    HighlightHandle = null;
+                    Render();
+                }
             }
         }
 
